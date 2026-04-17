@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UAV Nav Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f5f0;
+  --panel: #ffffff;
+  --border: #d4cfc4;
+  --border2: #b8b0a0;
+  --shadow: rgba(80,70,50,0.12);
+  --text: #2a2418;
+  --muted: #7a7060;
+  --accent: #c17f24;       /* MATLAB orange */
+  --accent2: #6b7c1a;      /* olive green */
+  --danger: #c0392b;
+  --purple: #6e4fa0;
+  --blue: #1f5f8b;
+  --particle: #d4a017;
+  --pixel: 'Press Start 2P', monospace;
+  --body: 'IBM Plex Sans', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); font-family: var(--body); color: var(--text); overflow: hidden; }
+
+body {
+  display: grid;
+  grid-template-columns: 268px 1fr;
+  grid-template-rows: 50px 1fr;
+  height: 100vh;
+}
+
+/* === TOPBAR === */
+#topbar {
+  grid-column: 1 / -1;
+  background: var(--panel);
+  border-bottom: 2px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 14px;
+  box-shadow: 0 2px 6px var(--shadow);
+  z-index: 10;
+}
+.logo {
+  font-family: var(--pixel); font-size: 8px; color: var(--accent);
+  letter-spacing: 0.06em; white-space: nowrap;
+}
+.sep { width: 1px; height: 26px; background: var(--border); margin: 0 3px; }
+
+.tbtn {
+  font-family: var(--body); font-weight: 600; font-size: 11.5px;
+  padding: 5px 10px; border-radius: 5px;
+  border: 1.5px solid var(--border);
+  background: var(--bg); color: var(--muted);
+  cursor: pointer; transition: all 0.12s;
+  display: flex; align-items: center; gap: 5px; white-space: nowrap;
+}
+.tbtn:hover { border-color: var(--accent); color: var(--accent); background: #fdf4e7; }
+.tbtn.active { border-color: var(--accent); color: var(--accent); background: #fdf4e7; font-weight: 700; }
+.tbtn.active.alt { border-color: var(--accent2); color: var(--accent2); background: #f3f5e8; }
+
+#btn-play {
+  padding: 6px 16px; font-weight: 700; font-size: 12.5px;
+  border-color: var(--accent2); color: var(--accent2); background: #f0f4e0;
+}
+#btn-play:hover { background: #e4ecc8; }
+#btn-play.running { border-color: var(--danger); color: var(--danger); background: #fceae9; }
+
+#status-badge {
+  margin-left: auto; font-family: var(--pixel); font-size: 6.5px;
+  padding: 5px 10px; border-radius: 20px;
+  border: 1.5px solid var(--border); color: var(--muted);
+  transition: all 0.3s; white-space: nowrap;
+}
+#status-badge.running { border-color: var(--accent2); color: var(--accent2); background: #f0f4e0; }
+#status-badge.goal { border-color: var(--purple); color: var(--purple); background: #f3eefc; }
+#status-badge.timeout { border-color: var(--danger); color: var(--danger); background: #fceae9; }
+
+/* === PANEL === */
+#panel {
+  background: var(--panel); border-right: 2px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 2px 0 6px var(--shadow);
+}
+#stats-row {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  border-bottom: 1.5px solid var(--border); background: var(--bg);
+}
+.stat-cell { padding: 8px 10px; border-right: 1px solid var(--border); }
+.stat-cell:last-child { border-right: none; }
+.stat-lbl { font-family: var(--pixel); font-size: 5.5px; color: var(--muted); margin-bottom: 4px; letter-spacing: 0.06em; }
+.stat-val { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--text); }
+.stat-val.accent { color: var(--accent); }
+.stat-val.danger { color: var(--danger); }
+
+#panel-body { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+#panel-body::-webkit-scrollbar { width: 4px; }
+#panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.section { border-bottom: 1px solid var(--border); }
+.section-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 13px; cursor: pointer; user-select: none; transition: background 0.12s;
+}
+.section-hdr:hover { background: var(--bg); }
+.sec-title { font-family: var(--pixel); font-size: 6.5px; color: var(--text); letter-spacing: 0.06em; }
+.sec-arrow { font-size: 9px; color: var(--muted); transition: transform 0.2s; }
+.section.collapsed .sec-arrow { transform: rotate(-90deg); }
+.sec-body { padding: 10px 13px 13px; }
+.section.collapsed .sec-body { display: none; }
+
+/* Slider */
+.prow { margin-bottom: 11px; }
+.prow:last-child { margin-bottom: 0; }
+.prow-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.plabel { font-family: var(--pixel); font-size: 6px; color: var(--muted); }
+.pval { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--accent); }
+.phint { font-size: 10px; color: var(--muted); margin-top: 3px; line-height: 1.4; font-style: italic; }
+
+input[type=range] {
+  width: 100%; height: 5px; -webkit-appearance: none; appearance: none;
+  background: var(--bg); border-radius: 3px; outline: none; cursor: pointer;
+  border: 1px solid var(--border);
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--accent); border: 2px solid white;
+  box-shadow: 0 1px 5px rgba(193,127,36,0.45); cursor: pointer; transition: transform 0.1s;
+}
+input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.2); }
+
+/* Toggle */
+.tog-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+.tog-row:last-child { margin-bottom: 0; }
+.tog-label { font-family: var(--pixel); font-size: 6px; color: var(--muted); }
+.tog {
+  width: 36px; height: 19px; border-radius: 10px;
+  border: 1.5px solid var(--border); background: var(--bg);
+  cursor: pointer; position: relative; transition: all 0.2s; flex-shrink: 0;
+}
+.tog::after {
+  content: ''; position: absolute; width: 13px; height: 13px; border-radius: 50%;
+  background: var(--muted); top: 1.5px; left: 1.5px; transition: all 0.2s;
+}
+.tog.on { background: #fdf4e7; border-color: var(--accent); }
+.tog.on::after { left: 18px; background: var(--accent); }
+
+/* Charts */
+.chart-lbl { font-family: var(--pixel); font-size: 5.5px; color: var(--muted); margin-bottom: 4px; letter-spacing: 0.05em; }
+canvas.chart { width: 100%; height: 46px; display: block; border-radius: 4px; background: var(--bg); border: 1px solid var(--border); margin-bottom: 9px; }
+
+/* === CANVAS === */
+#canvas-wrap { position: relative; background: #fafaf8; overflow: hidden; }
+#sim { display: block; }
+
+/* drag cursor states */
+#sim.can-grab { cursor: grab; }
+#sim.grabbing { cursor: grabbing; }
+#sim.crosshair { cursor: crosshair; }
+
+.tooltip {
+  position: absolute; font-family: var(--mono); font-size: 10px; color: var(--accent);
+  background: white; border: 1.5px solid var(--border); padding: 3px 8px;
+  border-radius: 5px; pointer-events: none; z-index: 10; display: none;
+  box-shadow: 0 2px 6px var(--shadow);
+}
+
+/* === MODAL === */
+#modal-overlay {
+  position: fixed; inset: 0; background: rgba(30,20,10,0.55);
+  backdrop-filter: blur(3px); z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+}
+#modal {
+  background: white; border-radius: 12px; padding: 28px 30px;
+  max-width: 500px; width: 90%;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.22);
+  border: 2px solid var(--border);
+}
+.modal-title { font-family: var(--pixel); font-size: 11px; color: var(--accent); margin-bottom: 6px; }
+.modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+
+.mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 18px; }
+.mode-card {
+  padding: 14px 12px; border-radius: 8px; border: 2px solid var(--border);
+  cursor: pointer; transition: all 0.18s; background: var(--bg); text-align: left;
+}
+.mode-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 5px 14px var(--shadow); }
+.mode-card.selected { border-color: var(--accent); background: #fdf4e7; }
+.card-icon {
+  width: 32px; height: 32px; margin-bottom: 8px;
+  display: flex; align-items: center; justify-content: center;
+}
+.mode-name { font-family: var(--pixel); font-size: 6.5px; color: var(--text); display: block; margin-bottom: 4px; }
+.mode-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+.modal-btn {
+  width: 100%; padding: 12px; border-radius: 7px; border: none;
+  background: var(--accent); color: white; font-family: var(--pixel); font-size: 8.5px;
+  cursor: pointer; transition: all 0.14s; letter-spacing: 0.06em;
+}
+.modal-btn:hover { background: #a86d1a; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(193,127,36,0.4); }
+
+/* === TUTORIAL === */
+#tutor {
+  position: fixed; z-index: 90; pointer-events: none;
+  opacity: 0; transition: opacity 0.3s;
+}
+#tutor.show { opacity: 1; pointer-events: auto; }
+.tutor-bubble {
+  background: white; border: 2px solid var(--accent); border-radius: 10px;
+  padding: 13px 15px; max-width: 240px;
+  box-shadow: 0 6px 20px rgba(193,127,36,0.2);
+}
+.tutor-step { font-family: var(--pixel); font-size: 6px; color: var(--accent); margin-bottom: 5px; }
+.tutor-text { font-size: 12px; color: var(--text); line-height: 1.5; margin-bottom: 10px; }
+.tutor-btns { display: flex; gap: 7px; }
+.tbubble-btn {
+  padding: 6px 11px; border-radius: 5px; border: 1.5px solid var(--accent);
+  font-family: var(--pixel); font-size: 6px; cursor: pointer; transition: all 0.13s;
+}
+.tbubble-btn.primary { background: var(--accent); color: white; }
+.tbubble-btn.primary:hover { background: #a86d1a; }
+.tbubble-btn.secondary { background: white; color: var(--muted); border-color: var(--border); }
+.tbubble-btn.secondary:hover { border-color: var(--muted); }
+
+@media (max-width: 680px) {
+  body { grid-template-columns: 1fr; grid-template-rows: 50px 200px 1fr; }
+  #panel { max-height: 200px; border-right: none; border-bottom: 2px solid var(--border); }
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <div class="logo">UAV NAV LAB</div>
+  <div class="sep"></div>
+  <button class="tbtn" id="btn-play" onclick="togglePlay()">RUN</button>
+  <button class="tbtn" id="btn-reset" onclick="resetSim()">RESET</button>
+  <button class="tbtn" id="btn-tutor" onclick="startTutorial()" title="Tutorial">?</button>
+  <div class="sep"></div>
+  <span style="font-size:11px;color:var(--muted);font-style:italic">Drag obstacles &amp; goal on the map &nbsp;|&nbsp; Right-click canvas to add</span>
+  <div id="status-badge">IDLE</div>
+</div>
+
+<!-- PANEL -->
+<div id="panel">
+  <div id="stats-row">
+    <div class="stat-cell">
+      <div class="stat-lbl">STEP</div>
+      <div class="stat-val" id="s-step">0</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-lbl">PF ERROR</div>
+      <div class="stat-val accent" id="s-err">—</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-lbl">N_EFF</div>
+      <div class="stat-val danger" id="s-neff">—</div>
+    </div>
+  </div>
+
+  <div id="panel-body">
+
+    <!-- Particle Filter -->
+    <div class="section" id="sec-pf">
+      <div class="section-hdr" onclick="toggleSec('sec-pf')">
+        <span class="sec-title">PARTICLE FILTER</span><span class="sec-arrow">▾</span>
+      </div>
+      <div class="sec-body">
+        <div class="prow" id="prow-npart">
+          <div class="prow-header"><span class="plabel">PARTICLES</span><span class="pval" id="v-npart">200</span></div>
+          <input type="range" id="r-npart" min="20" max="500" step="10" value="200">
+          <div class="phint">More = smarter, slower. Try 20 vs 500.</div>
+        </div>
+        <div class="prow" id="prow-sigmo">
+          <div class="prow-header"><span class="plabel">MOTION NOISE</span><span class="pval" id="v-sigmo">0.05</span></div>
+          <input type="range" id="r-sigmo" min="0.01" max="0.5" step="0.01" value="0.05">
+          <div class="phint">Crank it up. Chaos guaranteed.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sensors -->
+    <div class="section" id="sec-sens">
+      <div class="section-hdr" onclick="toggleSec('sec-sens')">
+        <span class="sec-title">SENSORS</span><span class="sec-arrow">▾</span>
+      </div>
+      <div class="sec-body">
+        <div class="tog-row"><span class="tog-label">GPS</span><button class="tog on" id="t-gps" onclick="toggleSensor('gps')"></button></div>
+        <div class="prow">
+          <div class="prow-header"><span class="plabel">GPS NOISE</span><span class="pval" id="v-siggps">0.15</span></div>
+          <input type="range" id="r-siggps" min="0.01" max="1.5" step="0.01" value="0.15">
+          <div class="phint">Kill GPS + max noise = blind drone.</div>
+        </div>
+        <div class="tog-row" style="margin-top:9px"><span class="tog-label">RANGE SENSOR</span><button class="tog on" id="t-range" onclick="toggleSensor('range')"></button></div>
+        <div class="prow">
+          <div class="prow-header"><span class="plabel">RANGE NOISE</span><span class="pval" id="v-sigrng">0.12</span></div>
+          <input type="range" id="r-sigrng" min="0.01" max="0.8" step="0.01" value="0.12">
+        </div>
+      </div>
+    </div>
+
+    <!-- APF collapsed -->
+    <div class="section collapsed" id="sec-apf">
+      <div class="section-hdr" onclick="toggleSec('sec-apf')">
+        <span class="sec-title">PATH PLANNER (APF)</span><span class="sec-arrow">▾</span>
+      </div>
+      <div class="sec-body">
+        <div class="prow">
+          <div class="prow-header"><span class="plabel">ATTRACT</span><span class="pval" id="v-katt">1.0</span></div>
+          <input type="range" id="r-katt" min="0.1" max="5" step="0.1" value="1.0">
+          <div class="phint">Goal pull. High = bee-line, crash risk.</div>
+        </div>
+        <div class="prow">
+          <div class="prow-header"><span class="plabel">REPEL</span><span class="pval" id="v-krep">1.2</span></div>
+          <input type="range" id="r-krep" min="0" max="5" step="0.1" value="1.2">
+          <div class="phint">Obstacle push. Too high = drone freezes.</div>
+        </div>
+        <div class="prow">
+          <div class="prow-header"><span class="plabel">TANGENT</span><span class="pval" id="v-ktan">1.5</span></div>
+          <input type="range" id="r-ktan" min="0" max="5" step="0.1" value="1.5">
+          <div class="phint">Swerve factor. Saves lives.</div>
+        </div>
+        <div class="prow">
+          <div class="prow-header"><span class="plabel">OBS RADIUS</span><span class="pval" id="v-rho0">1.4</span></div>
+          <input type="range" id="r-rho0" min="0.3" max="3.0" step="0.1" value="1.4">
+        </div>
+        <div class="prow">
+          <div class="prow-header"><span class="plabel">MAX SPEED</span><span class="pval" id="v-vmax">0.10</span></div>
+          <input type="range" id="r-vmax" min="0.02" max="0.30" step="0.01" value="0.10">
+        </div>
+      </div>
+    </div>
+
+    <!-- Viz -->
+    <div class="section" id="sec-viz">
+      <div class="section-hdr" onclick="toggleSec('sec-viz')">
+        <span class="sec-title">OVERLAY</span><span class="sec-arrow">▾</span>
+      </div>
+      <div class="sec-body">
+        <div class="tog-row"><span class="tog-label">PARTICLES</span><button class="tog on" id="t-parts" onclick="toggleViz('parts')"></button></div>
+        <div class="tog-row"><span class="tog-label">PATHS</span><button class="tog on" id="t-paths" onclick="toggleViz('paths')"></button></div>
+        <div class="tog-row"><span class="tog-label">INFLUENCE RINGS</span><button class="tog on" id="t-circles" onclick="toggleViz('circles')"></button></div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="section" id="sec-charts">
+      <div class="section-hdr" onclick="toggleSec('sec-charts')">
+        <span class="sec-title">TELEMETRY</span><span class="sec-arrow">▾</span>
+      </div>
+      <div class="sec-body" style="padding-bottom:4px">
+        <div class="chart-lbl">LOCALIZATION ERROR (m)</div>
+        <canvas class="chart" id="errChart"></canvas>
+        <div class="chart-lbl">N_EFF — EFFECTIVE PARTICLES</div>
+        <canvas class="chart" id="neffChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="section" id="sec-legend">
+      <div class="section-hdr" onclick="toggleSec('sec-legend')">
+        <span class="sec-title">LEGEND</span><span class="sec-arrow">▾</span>
+      </div>
+      <div class="sec-body" style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:2px;background:#6b7c1a"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">TRUE DRONE</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:2px;background:#1f5f8b"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">PF ESTIMATE</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:#d4a017"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">PARTICLES</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:2px;background:#c17f24"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">NORMAL BIRD</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:2px;background:#c0392b"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">ANGRY BIRD (follows!)</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:2px;background:#5a7a3a"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">TREE (static)</span></div>
+      </div>
+    </div>
+
+    <!-- Right-click menu helper -->
+    <div class="section" id="sec-add">
+      <div class="section-hdr" onclick="toggleSec('sec-add')">
+        <span class="sec-title">ADD OBSTACLES</span><span class="sec-arrow">▾</span>
+      </div>
+      <div class="sec-body">
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5"><strong>Right-click</strong> anywhere on the map to spawn trees or birds. Then <strong>drag</strong> them around.</p>
+        <button class="tbtn active" id="spawn-mode-tree" onclick="setSpawnMode('tree')" style="width:100%;justify-content:center;margin-bottom:7px">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L12 8H2z" fill="currentColor" opacity=".8"/><rect x="6" y="8" width="2" height="5" fill="currentColor" opacity=".6"/></svg>
+          SPAWN: TREE
+        </button>
+        <button class="tbtn" id="spawn-mode-bird" onclick="setSpawnMode('bird')" style="width:100%;justify-content:center">
+          <svg width="16" height="10" viewBox="0 0 16 10" fill="none"><ellipse cx="8" cy="5" rx="4" ry="2.5" fill="currentColor"/><path d="M4 5C2 3 0 4 0 4M12 5C14 3 16 4 16 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          SPAWN: BIRD
+        </button>
+        <button onclick="clearCustom()" style="margin-top:8px;width:100%;padding:5px;border-radius:5px;border:1.5px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-size:11px;font-family:var(--body)">Clear all obstacles</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- CANVAS -->
+<div id="canvas-wrap">
+  <canvas id="sim"></canvas>
+  <div id="tooltip" class="tooltip"></div>
+  <!-- Context menu -->
+  <div id="ctx-menu" style="display:none;position:absolute;background:white;border:1.5px solid var(--border);border-radius:7px;box-shadow:0 4px 16px var(--shadow);z-index:20;overflow:hidden;min-width:140px">
+    <div class="ctx-item" onclick="ctxAction('tree')" style="padding:9px 14px;cursor:pointer;font-size:12px;font-family:var(--body);display:flex;align-items:center;gap:8px;transition:background 0.1s" onmouseover="this.style.background='#fdf4e7'" onmouseout="this.style.background=''">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1L10 8H2z" fill="#6b7c1a" opacity=".9"/><rect x="5" y="8" width="2" height="4" fill="#5a7a3a"/></svg> Add Tree
+    </div>
+    <div class="ctx-item" onclick="ctxAction('bird')" style="padding:9px 14px;cursor:pointer;font-size:12px;font-family:var(--body);display:flex;align-items:center;gap:8px;transition:background 0.1s" onmouseover="this.style.background='#fdf4e7'" onmouseout="this.style.background=''">
+      <svg width="14" height="8" viewBox="0 0 14 8" fill="none"><ellipse cx="7" cy="4" rx="3.5" ry="2" fill="#c17f24"/><path d="M3.5 4C2 3 0.5 3.5 0.5 3.5M10.5 4C12 3 13.5 3.5 13.5 3.5" stroke="#c17f24" stroke-width="1.2" stroke-linecap="round"/></svg> Add Bird
+    </div>
+    <div class="ctx-item" onclick="ctxAction('angry')" style="padding:9px 14px;cursor:pointer;font-size:12px;font-family:var(--body);display:flex;align-items:center;gap:8px;transition:background 0.1s" onmouseover="this.style.background='#fceae9'" onmouseout="this.style.background=''">
+      <svg width="14" height="8" viewBox="0 0 14 8" fill="none"><ellipse cx="7" cy="4" rx="3.5" ry="2" fill="#c0392b"/><path d="M3.5 4C2 3 0.5 3.5 0.5 3.5M10.5 4C12 3 13.5 3.5 13.5 3.5" stroke="#c0392b" stroke-width="1.2" stroke-linecap="round"/><path d="M5 2L6 3M9 2L8 3" stroke="#c0392b" stroke-width="1" stroke-linecap="round"/></svg> Add ANGRY Bird
+    </div>
+    <div class="ctx-item" onclick="ctxAction('goal')" style="padding:9px 14px;cursor:pointer;font-size:12px;font-family:var(--body);display:flex;align-items:center;gap:8px;transition:background 0.1s" onmouseover="this.style.background='#f3eefc'" onmouseout="this.style.background=''">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#6e4fa0" stroke-width="1.5"/><circle cx="6" cy="6" r="2" fill="#6e4fa0"/></svg> Move Goal Here
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay">
+  <div id="modal">
+    <div class="modal-title">UAV NAV LAB</div>
+    <div class="modal-sub">A drone that doesn't know where it is tries to get somewhere without hitting stuff. What do you want to break today?</div>
+    <div style="font-family:var(--pixel);font-size:6px;color:var(--muted);margin-bottom:10px">PICK YOUR ADVENTURE</div>
+    <div class="mode-cards">
+      <div class="mode-card" id="card-pf" onclick="selectCard('pf')">
+        <div class="card-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="3" fill="#1f5f8b"/><circle cx="7" cy="8" r="2" fill="#d4a017" opacity=".5"/><circle cx="20" cy="10" r="2" fill="#d4a017" opacity=".5"/><circle cx="10" cy="20" r="2" fill="#d4a017" opacity=".7"/><circle cx="19" cy="20" r="2" fill="#d4a017" opacity=".4"/><circle cx="5" cy="17" r="1.5" fill="#d4a017" opacity=".6"/></svg>
+        </div>
+        <span class="mode-name">PARTICLE FILTER</span>
+        <span class="mode-desc">Watch a cloud of guesses collapse into the truth</span>
+      </div>
+      <div class="mode-card" id="card-apf" onclick="selectCard('apf')">
+        <div class="card-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="22" cy="6" r="4" fill="#6e4fa0" opacity=".3" stroke="#6e4fa0" stroke-width="1.5"/><circle cx="6" cy="22" r="3" fill="#6b7c1a"/><path d="M8 20C10 14 16 12 20 8" stroke="#c17f24" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 2"/></svg>
+        </div>
+        <span class="mode-name">PATH PLANNING</span>
+        <span class="mode-desc">Forces that attract, repel, and occasionally confuse</span>
+      </div>
+      <div class="mode-card" id="card-obs" onclick="selectCard('obs')">
+        <div class="card-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><ellipse cx="14" cy="14" rx="5" ry="3" fill="#c0392b"/><path d="M9 14C6 11 2 13 2 13M19 14C22 11 26 13 26 13" stroke="#c0392b" stroke-width="1.8" stroke-linecap="round"/><path d="M10 10.5L12 12M18 10.5L16 12" stroke="#c0392b" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </div>
+        <span class="mode-name">ANGRY BIRDS</span>
+        <span class="mode-desc">Some birds are jerks and will hunt you down</span>
+      </div>
+      <div class="mode-card" id="card-all" onclick="selectCard('all')">
+        <div class="card-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="3" y="3" width="10" height="10" rx="2" fill="#c17f24" opacity=".3" stroke="#c17f24" stroke-width="1.5"/><rect x="15" y="15" width="10" height="10" rx="2" fill="#6b7c1a" opacity=".3" stroke="#6b7c1a" stroke-width="1.5"/><path d="M13 7h2M21 13v2" stroke="#6e4fa0" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <span class="mode-name">FREE PLAY</span>
+        <span class="mode-desc">No hand-holding. Just vibes.</span>
+      </div>
+    </div>
+    <button class="modal-btn" onclick="closeModal()">LAUNCH</button>
+  </div>
+</div>
+
+<!-- TUTORIAL -->
+<div id="tutor">
+  <div class="tutor-bubble">
+    <div class="tutor-step" id="tutor-step">STEP 1 / 5</div>
+    <div class="tutor-text" id="tutor-text">...</div>
+    <div class="tutor-btns">
+      <button class="tbubble-btn primary" onclick="nextTutorStep()">NEXT</button>
+      <button class="tbubble-btn secondary" onclick="closeTutor()">SKIP</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// === CONSTANTS & STATE =================================================================================
+const canvas = document.getElementById('sim');
+const ctx = canvas.getContext('2d');
+const treeImg = new Image();
+treeImg.src = "assets/tree.png";
+const droneImg = new Image();
+droneImg.src = "assets/drone.png";
+const birdImg1 = new Image();
+birdImg1.src = "assets/bird1.png";
+const birdImg2 = new Image();
+birdImg2.src = "assets/bird2.png";
+const angryBirdImg1 = new Image();
+angryBirdImg1.src = "assets/bird1.png";
+const angryBirdImg2 = new Image();
+angryBirdImg2.src = "assets/bird2.png";
+const errC = document.getElementById('errChart');
+const errX = errC.getContext('2d');
+const neffC = document.getElementById('neffChart');
+const neffX = neffC.getContext('2d');
+
+let sensors = { gps: true, range: true };
+let viz = { parts: true, paths: true, circles: true };
+let running = false, animId = null, stepCount = 0;
+let errHist = [], neffHist = [];
+let lastFrame = 0;
+const FRAME = 100;
+
+const DEF = {
+  start: [0.6, 0.6], goal: [5.0, 5.0],
+  rho0: 1.4, k_att: 1.0, k_rep: 1.2, k_tan: 1.5,
+  v_max: 0.10, dt: 1.0, tol: 0.15, beta: 0.20, d_goal: 1.0,
+  sigma_accel: 0.02, sigma_gps: 0.15, sigma_range: 0.12, sigma_motion: 0.05,
+  n_particles: 200,
+  initPalms: [[4,3],[0.5,1.5],[1.5,4.8],[3.5,1.5]],
+  initVels: [[-0.06,-0.04],[0.10,0.12],[0.04,-0.07],[-0.08,0.05]],
+  initTypes: ['bird','bird','tree','bird']
+};
+let cfg = Object.assign({}, DEF);
+
+let droneTruePos, droneEst, vPrev, particles, weights;
+let palms = [], palmVels = [], palmTypes = [], palmAngry = [];
+let birdPhase = [], birdFlapSpeed = [], birdFacing = [];let pathTrue=[], pathEst=[];
+let customGoal=null, customStart=null;
+let birdAnim=0;
+let selectedCard=null;
+let spawnMode='tree';
+
+// === DRAG STATE ==========================================================================================─
+let dragTarget=null; // { type:'palm'|'goal'|'start', idx }
+let dragging=false;
+let dragOffX=0, dragOffY=0;
+
+// === CTX MENU =============================================================================================
+let ctxPos=[0,0];
+function showCtxMenu(e) {
+  e.preventDefault();
+  const r=canvas.getBoundingClientRect();
+  ctxPos=s2w(e.clientX-r.left,e.clientY-r.top);
+  const m=document.getElementById('ctx-menu');
+  m.style.display='block';
+  m.style.left=(e.clientX-r.left)+'px';
+  m.style.top=(e.clientY-r.top)+'px';
+}
+function hideCtxMenu() { document.getElementById('ctx-menu').style.display='none'; }
+canvas.addEventListener('contextmenu',showCtxMenu);
+document.addEventListener('click',hideCtxMenu);
+function ctxAction(type) {
+  hideCtxMenu();
+  const[cx,cy]=ctxPos.map((v,i)=>clamp(v,0,6));
+  if(type==='goal') { customGoal=[cx,cy]; if(!running) draw(); return; }
+  const vx=(Math.random()-0.5)*0.18, vy=(Math.random()-0.5)*0.18;
+  const angry=(type==='angry');
+  palms.push([cx, cy]);
+  palmVels.push(type === 'tree' ? [0, 0] : [vx, vy]);
+  palmTypes.push(type === 'tree' ? 'tree' : 'bird');
+  palmAngry.push(angry);
+  birdPhase.push(Math.random() * 1000);
+  birdFlapSpeed.push(type === 'tree' ? 8 : (angry ? 4 + Math.random() * 1.5 : 5 + Math.random() * 2));
+  birdFacing.push(vx >= 0 ? 1 : -1);
+  if(!running) draw();
+}
+
+// === SPAWN MODE ==========================================================================================─
+function setSpawnMode(m) {
+  spawnMode=m;
+  document.getElementById('spawn-mode-tree').classList.toggle('active',m==='tree');
+  document.getElementById('spawn-mode-bird').classList.toggle('active',m==='bird');
+}
+
+function clearCustom() {
+  palms = DEF.initPalms.map(p => [...p]);
+  palmVels = DEF.initVels.map(v => [...v]);
+  palmTypes = [...DEF.initTypes];
+  palmAngry = palms.map(() => false);
+  rebuildBirdMeta();
+  if (!running) draw();
+}
+
+// === UTILS ===================================================================================================
+function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function dist(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1]);}
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+
+// === APF ======================================================================================================
+function apfForce(pos,goal,obs) {
+  const gv=[goal[0]-pos[0],goal[1]-pos[1]],gd=Math.hypot(...gv);
+  let Fa;
+  if(gd<1e-9) Fa=[0,0];
+  else if(gd<=cfg.d_goal) Fa=[cfg.k_att*gv[0],cfg.k_att*gv[1]];
+  else { const s=cfg.k_att*cfg.d_goal/gd; Fa=[s*gv[0],s*gv[1]]; }
+  let Fr=[0,0],Ft=[0,0];
+  for(const o of obs) {
+    const d=[pos[0]-o[0],pos[1]-o[1]],rho=Math.hypot(...d);
+    if(rho<1e-6||rho>cfg.rho0) continue;
+    const rh=[d[0]/rho,d[1]/rho],sc=cfg.k_rep*(1/rho-1/cfg.rho0)/rho**2;
+    Fr[0]+=sc*rh[0]; Fr[1]+=sc*rh[1];
+    const tccw=[-rh[1],rh[0]],tcw=[rh[1],-rh[0]];
+    const gh=gd>1e-9?[gv[0]/gd,gv[1]/gd]:[0,1];
+    const th=tcw[0]*gh[0]+tcw[1]*gh[1]>tccw[0]*gh[0]+tccw[1]*gh[1]?tcw:tccw;
+    const ts=cfg.k_tan*(1/rho-1/cfg.rho0);
+    Ft[0]+=ts*th[0]; Ft[1]+=ts*th[1];
+  }
+  return [Fa[0]+Fr[0]+Ft[0],Fa[1]+Fr[1]+Ft[1]];
+}
+function apfVel(pos,goal,obs,vp) {
+  const F=apfForce(pos,goal,obs),fn=Math.hypot(...F);
+  const vc=fn<1e-9?[...vp]:[F[0]/fn,F[1]/fn];
+  let vs=[(1-cfg.beta)*vp[0]+cfg.beta*vc[0],(1-cfg.beta)*vp[1]+cfg.beta*vc[1]];
+  const vn=Math.hypot(...vs);
+  if(vn<1e-9) vs=[...vc]; else{vs[0]/=vn;vs[1]/=vn;}
+  const spd=cfg.v_max*Math.min(1,dist(pos,goal)/0.8);
+  return {u:[spd*vs[0],spd*vs[1]],vp:[...vs]};
+}
+
+// === PARTICLE FILTER ====================================================================================
+function pfStep(pp,ww,u,zG,zR,obs) {
+  const n=pp.length;
+  const np=pp.map(p=>[clamp(p[0]+u[0]*cfg.dt+cfg.sigma_motion*gauss(),0,6),clamp(p[1]+u[1]*cfg.dt+cfg.sigma_motion*gauss(),0,6)]);
+  const lw=new Float64Array(n);
+  for(let i=0;i<n;i++){
+    const px=np[i];
+    if(sensors.gps){const e0=zG[0]-px[0],e1=zG[1]-px[1];lw[i]-=0.5*(e0*e0+e1*e1)/cfg.sigma_gps**2;}
+    if(sensors.range){for(let j=0;j<obs.length;j++){const er=zR[j]-dist(px,obs[j]);lw[i]-=0.5*er*er/cfg.sigma_range**2;}}
+  }
+  const mx=Math.max(...lw);
+  const nw=new Float64Array(n);
+  for(let i=0;i<n;i++) nw[i]=Math.exp(lw[i]-mx);
+  const ws=nw.reduce((a,b)=>a+b,0)||1;
+  for(let i=0;i<n;i++) nw[i]/=ws;
+  let ex=0,ey=0;
+  for(let i=0;i<n;i++){ex+=np[i][0]*nw[i];ey+=np[i][1]*nw[i];}
+  const neff=1/nw.reduce((a,w)=>a+w*w,0);
+  let fp=np,fw=nw;
+  if(neff<n/2){
+    const rs=[],cw=new Float64Array(n);
+    cw[0]=nw[0];for(let i=1;i<n;i++)cw[i]=cw[i-1]+nw[i];
+    const st=Math.random()/n;let idx=0;
+    for(let j=0;j<n;j++){const tg=st+j/n;while(idx<n-1&&tg>cw[idx])idx++;rs.push([...np[idx]]);}
+    fp=rs;fw=new Float64Array(n).fill(1/n);
+  }
+  return {pp:fp,ww:fw,est:[ex,ey],neff};
+}
+
+function rebuildBirdMeta() {
+  birdPhase = palms.map(() => Math.random() * 1000);
+  birdFlapSpeed = palms.map((_, i) => {
+    if (palmTypes[i] !== 'bird') return 8;
+    return palmAngry[i] ? 4 + Math.random() * 1.5 : 5 + Math.random() * 2;
+  });
+  birdFacing = palms.map((_, i) => {
+    const vx = palmVels[i]?.[0] ?? 0;
+    return vx >= 0 ? 1 : -1; // 1 = facing right, -1 = facing left
+  });
+}
+
+// === RESET ===================================================================================================
+function resetSim() {
+  stepCount=0; errHist=[]; neffHist=[];
+  const start=customStart||DEF.start;
+  cfg.n_particles=parseInt(document.getElementById('r-npart').value);
+  cfg.sigma_motion=parseFloat(document.getElementById('r-sigmo').value);
+  droneTruePos=[...start]; droneEst=[...start]; vPrev=[1,0];
+  pathTrue=[[...start]]; pathEst=[[...start]];
+  palms = DEF.initPalms.map(p => [...p]);
+  palmVels = DEF.initVels.map(v => [...v]);
+  palmTypes = [...DEF.initTypes];
+  palmAngry = palms.map(() => false);
+  rebuildBirdMeta();
+  const n=cfg.n_particles;
+  particles=[]; weights=new Float64Array(n).fill(1/n);
+  for(let i=0;i<n;i++) particles.push([clamp(start[0]+cfg.sigma_motion*5*gauss(),0,6),clamp(start[1]+cfg.sigma_motion*5*gauss(),0,6)]);
+  setStatus('IDLE','');
+  document.getElementById('s-step').textContent='0';
+  document.getElementById('s-err').textContent='—';
+  document.getElementById('s-neff').textContent='—';
+  draw(); drawCharts();
+}
+
+// === SIM STEP =============================================================================================─
+function syncCfg() {
+  cfg.rho0=parseFloat(document.getElementById('r-rho0').value);
+  cfg.k_att=parseFloat(document.getElementById('r-katt').value);
+  cfg.k_rep=parseFloat(document.getElementById('r-krep').value);
+  cfg.k_tan=parseFloat(document.getElementById('r-ktan').value);
+  cfg.v_max=parseFloat(document.getElementById('r-vmax').value);
+  cfg.sigma_gps=parseFloat(document.getElementById('r-siggps').value);
+  cfg.sigma_range=parseFloat(document.getElementById('r-sigrng').value);
+  cfg.sigma_motion=parseFloat(document.getElementById('r-sigmo').value);
+  cfg.d_goal=1.0;
+}
+function simStep() {
+  const goal=customGoal||DEF.goal;
+  if(dist(droneTruePos,goal)<cfg.tol||stepCount>2000){
+    running=false;
+    document.getElementById('btn-play').textContent='RUN';
+    document.getElementById('btn-play').classList.remove('running');
+    const reached=dist(droneTruePos,goal)<cfg.tol;
+    setStatus(reached?'GOAL':'TIMEOUT',reached?'goal':'timeout');
+    draw(); return;
+  }
+  syncCfg(); birdAnim++;
+  for(let i=0;i<palms.length;i++){
+    if(palmTypes[i]==='bird'){
+      if(palmAngry[i]){
+        // chase drone true pos
+        const dx=droneTruePos[0]-palms[i][0], dy=droneTruePos[1]-palms[i][1];
+        const d=Math.hypot(dx,dy)||1;
+        const speed=0.18+Math.random()*0.04;
+        palmVels[i]=[dx/d*speed+gauss()*0.02, dy/d*speed+gauss()*0.02];
+      } else {
+        // random drift with occasional direction kick
+        if(Math.random()<0.04){
+          palmVels[i][0]+=(Math.random()-0.5)*0.08;
+          palmVels[i][1]+=(Math.random()-0.5)*0.08;
+          const spd=Math.hypot(...palmVels[i]);
+          if(spd>0.22){palmVels[i][0]/=spd*0.22/0.22;palmVels[i][1]/=spd*0.22/0.22;}
+        }
+      }
+      palms[i][0]+=palmVels[i][0]; palms[i][1]+=palmVels[i][1];
+      if(palms[i][0]<0||palms[i][0]>6){palmVels[i][0]*=-1;palms[i][0]+=palmVels[i][0];}
+      if(palms[i][1]<0||palms[i][1]>6){palmVels[i][1]*=-1;palms[i][1]+=palmVels[i][1];}
+    }
+  }
+  const{u,vp}=apfVel(droneEst,goal,palms,vPrev); vPrev=vp;
+  droneTruePos=[clamp(droneTruePos[0]+u[0]*cfg.dt+cfg.sigma_accel*gauss()*cfg.dt**2,0,6),clamp(droneTruePos[1]+u[1]*cfg.dt+cfg.sigma_accel*gauss()*cfg.dt**2,0,6)];
+  const zG=[droneTruePos[0]+cfg.sigma_gps*gauss(),droneTruePos[1]+cfg.sigma_gps*gauss()];
+  const zR=palms.map(o=>dist(droneTruePos,o)+cfg.sigma_range*gauss());
+  const n=cfg.n_particles;
+  if(particles.length!==n){
+    if(particles.length<n){for(let i=particles.length;i<n;i++)particles.push([clamp(droneEst[0]+gauss()*0.3,0,6),clamp(droneEst[1]+gauss()*0.3,0,6)]);}
+    else particles=particles.slice(0,n);
+    weights=new Float64Array(n).fill(1/n);
+  }
+  const r=pfStep(particles,weights,u,zG,zR,palms);
+  particles=r.pp; weights=r.ww; droneEst=r.est;
+  const neff=r.neff, err=dist(droneTruePos,droneEst);
+  stepCount++; errHist.push(err); neffHist.push(neff);
+  if(errHist.length>200){errHist.shift();neffHist.shift();}
+  pathTrue.push([...droneTruePos]); pathEst.push([...droneEst]);
+  if(pathTrue.length>400){pathTrue.shift();pathEst.shift();}
+  document.getElementById('s-step').textContent=stepCount;
+  document.getElementById('s-err').textContent=err.toFixed(3)+'m';
+  document.getElementById('s-neff').textContent=Math.round(neff);
+  setStatus('RUNNING','running');
+  draw(); drawCharts();
+}
+
+function loop(ts){
+  if(!running) return;
+  if(ts-lastFrame>=FRAME){lastFrame=ts;simStep();}
+  animId=requestAnimationFrame(loop);
+}
+
+// === DRAW ===================================================================================================─
+const PAD=44;
+function w2s(wx,wy){const cw=canvas.width,ch=canvas.height;return[PAD+(wx/6)*(cw-2*PAD),(ch-PAD)-(wy/6)*(ch-2*PAD)];}
+function s2w(sx,sy){const cw=canvas.width,ch=canvas.height;return[((sx-PAD)/(cw-2*PAD))*6,((ch-PAD-sy)/(ch-2*PAD))*6];}
+
+function drawDrone(x, y, col, size, alpha = 1) {
+  ctx.save();
+
+  const w = size * 3.0;
+  const h = size * 3.0;
+
+  ctx.shadowColor = col + '44';
+  ctx.shadowBlur = 10;
+  ctx.globalAlpha = alpha;
+
+  if (droneImg.complete && droneImg.naturalWidth > 0) {
+    ctx.drawImage(droneImg, x - w / 2, y - h / 2, w, h);
+  } else {
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(x, y, size * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(x, y, size * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
+
+function drawTree(x, y, grabbed) {
+  ctx.save();
+
+  if (grabbed) {
+    ctx.shadowColor = '#c17f24';
+    ctx.shadowBlur = 14;
+  }
+
+  const w = 66;
+  const h = 84;
+
+  if (treeImg.complete && treeImg.naturalWidth > 0) {
+    ctx.drawImage(treeImg, x - w / 2, y - h / 2, w, h);
+  } else {
+    // fallback if image is not loaded yet
+    ctx.fillStyle = '#8B5E3C';
+    ctx.fillRect(x - 3, y + 2, 6, 9);
+    ctx.fillStyle = '#3d6b2a';
+    ctx.beginPath();
+    ctx.arc(x, y - 2, 12, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawBird(x, y, t, angry, grabbed) {
+  ctx.save();
+
+  const w = angry ? 30 : 30;
+  const h = angry ? 40 : 40;
+
+  if (grabbed) {
+    ctx.shadowColor = '#c17f24';
+    ctx.shadowBlur = 14;
+  } else if (angry) {
+    ctx.shadowColor = '#c0392b44';
+    ctx.shadowBlur = 8;
+  }
+
+  const frame = Math.floor(t / 10) % 2;
+
+  let img;
+  if (angry) {
+    img = frame === 0 ? angryBirdImg1 : angryBirdImg2;
+  } else {
+    img = frame === 0 ? birdImg1 : birdImg2;
+  }
+
+  if (img.complete && img.naturalWidth > 0) {
+    ctx.drawImage(img, x - w / 2, y - h / 2, w, h);
+  } else {
+    // fallback if image is not loaded yet
+    const flap = Math.sin(t * (angry ? 1.8 : 0.9)) * (angry ? 0.55 : 0.35);
+    const col = angry ? '#c0392b' : '#c17f24';
+    const wingCol = angry ? '#e74c3c' : '#d4a017';
+
+    ctx.save();
+    ctx.translate(x - 8, y);
+    ctx.rotate(-flap);
+    ctx.fillStyle = wingCol;
+    ctx.beginPath();
+    ctx.ellipse(0, -3, 11, 4, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(x + 8, y);
+    ctx.rotate(flap);
+    ctx.fillStyle = wingCol;
+    ctx.beginPath();
+    ctx.ellipse(0, -3, 11, 4, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 9, 5.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+
+function drawFlag(x,y,grabbed) {
+  ctx.save();
+  const col='#6e4fa0';
+  if(grabbed){ctx.shadowColor=col;ctx.shadowBlur=14;}
+  ctx.strokeStyle=col+'bb'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y-24); ctx.stroke();
+  ctx.fillStyle=col;
+  ctx.beginPath(); ctx.moveTo(x,y-24); ctx.lineTo(x+16,y-17); ctx.lineTo(x,y-10); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle=col+'55'; ctx.lineWidth=1.5; ctx.setLineDash([3,4]);
+  ctx.beginPath(); ctx.arc(x,y,14,0,Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function draw() {
+  const cw=canvas.width,ch=canvas.height;
+  ctx.clearRect(0,0,cw,ch);
+
+  // MATLAB-style light gray bg
+  ctx.fillStyle='#fafaf8'; ctx.fillRect(0,0,cw,ch);
+
+  // plot area background
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(PAD,PAD,cw-2*PAD,ch-2*PAD);
+  ctx.strokeStyle='#c8c4bc'; ctx.lineWidth=1;
+  ctx.strokeRect(PAD,PAD,cw-2*PAD,ch-2*PAD);
+
+  // Grid
+  for(let i=0;i<=6;i++){
+    const[sx]=w2s(i,0),[,sy]=w2s(0,i);
+    ctx.strokeStyle=i%2===0?'rgba(180,170,155,0.6)':'rgba(180,170,155,0.3)';
+    ctx.lineWidth=i===0||i===6?1.2:0.7;
+    ctx.beginPath(); ctx.moveTo(sx,PAD); ctx.lineTo(sx,ch-PAD); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(PAD,sy); ctx.lineTo(cw-PAD,sy); ctx.stroke();
+    if(i>0&&i<6){
+      ctx.fillStyle='#8a8070'; ctx.font='10px "IBM Plex Mono"'; ctx.textAlign='center';
+      ctx.fillText(i,sx,ch-PAD+16);
+      ctx.textAlign='right';
+      ctx.fillText(i,PAD-8,sy+4);
+    }
+  }
+  ctx.fillStyle='#8a8070'; ctx.font='11px "IBM Plex Sans"'; ctx.textAlign='center';
+  ctx.fillText('X (m)',cw/2,ch-4);
+  ctx.save(); ctx.translate(14,ch/2); ctx.rotate(-Math.PI/2); ctx.fillText('Y (m)',0,0); ctx.restore();
+
+  const goal=customGoal||DEF.goal;
+
+  // Influence rings
+  if(viz.circles&&palms){
+    for(const o of palms){
+      const[ox,oy]=w2s(o[0],o[1]);
+      const[rx]=w2s(o[0]+cfg.rho0,o[1]);
+      const rad=Math.abs(rx-ox);
+      ctx.save();
+      const grad=ctx.createRadialGradient(ox,oy,0,ox,oy,rad);
+      grad.addColorStop(0,'rgba(193,127,36,0.06)'); grad.addColorStop(1,'rgba(193,127,36,0)');
+      ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(ox,oy,rad,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='rgba(193,127,36,0.22)'; ctx.lineWidth=1; ctx.setLineDash([4,5]);
+      ctx.beginPath(); ctx.arc(ox,oy,rad,0,Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+  }
+
+  // Paths
+  if(viz.paths&&pathTrue.length>1){
+    ctx.lineWidth=2; ctx.setLineDash([]);
+    ctx.strokeStyle='rgba(107,124,26,0.5)';
+    ctx.beginPath(); let[sx,sy]=w2s(...pathTrue[0]); ctx.moveTo(sx,sy);
+    for(const p of pathTrue.slice(1)){[sx,sy]=w2s(...p);ctx.lineTo(sx,sy);} ctx.stroke();
+    ctx.strokeStyle='rgba(31,95,139,0.4)'; ctx.setLineDash([5,4]);
+    ctx.beginPath(); [sx,sy]=w2s(...pathEst[0]); ctx.moveTo(sx,sy);
+    for(const p of pathEst.slice(1)){[sx,sy]=w2s(...p);ctx.lineTo(sx,sy);} ctx.stroke();
+    ctx.setLineDash([]);
+  }  
+
+  // Obstacles
+  for(let i=0;i<palms.length;i++){
+    const[ox,oy]=w2s(palms[i][0],palms[i][1]);
+    const grabbed=(dragging&&dragTarget&&dragTarget.type==='palm'&&dragTarget.idx===i);
+    if (palmTypes[i] === 'tree') drawTree(ox, oy, grabbed);
+    else drawBird(ox, oy, birdAnim, palmAngry[i], grabbed, i);
+  }
+
+  // Start
+  const startPos=customStart||DEF.start;
+  const[gsx,gsy]=w2s(startPos[0],startPos[1]);
+  ctx.save();
+  ctx.strokeStyle='rgba(107,124,26,0.4)'; ctx.lineWidth=1.5; ctx.setLineDash([3,4]);
+  ctx.beginPath(); ctx.arc(gsx,gsy,13,0,Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(107,124,26,0.08)'; ctx.beginPath(); ctx.arc(gsx,gsy,13,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(107,124,26,0.7)'; ctx.font='bold 9px "IBM Plex Sans"'; ctx.textAlign='left';
+  ctx.fillText('START',gsx+16,gsy+4);
+  ctx.restore();
+
+  // Goal flag
+  const[fgx,fgy]=w2s(goal[0],goal[1]);
+  const goalGrabbed=(dragging&&dragTarget&&dragTarget.type==='goal');
+  drawFlag(fgx,fgy,goalGrabbed);
+  ctx.fillStyle='rgba(110,79,160,0.75)'; ctx.font='bold 9px "IBM Plex Sans"'; ctx.textAlign='left';
+  ctx.fillText('GOAL',fgx+20,fgy-14);
+
+
+  // ESTIMATE DRONE
+if (droneEst) {
+  const [ex, ey] = w2s(droneEst[0], droneEst[1]);
+  drawDrone(ex, ey, '#ff584b', 24, 0.3);
+}
+
+// TRUE DRONE
+if (droneTruePos) {
+  const [tx, ty] = w2s(droneTruePos[0], droneTruePos[1]);
+  drawDrone(tx, ty, '#6b7c1a', 24, 1);
+}
+
+// PARTICLES
+if (viz.parts && particles) {
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+    const [px, py] = w2s(p[0], p[1]);
+    const w = weights[i] * particles.length;
+    const alpha = Math.min(0.45, 0.05 + w * 0.20);
+
+    ctx.fillStyle = `rgba(212,160,23,${alpha})`;
+    ctx.beginPath();
+    ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// TRUE DRONE
+if (droneTruePos) {
+  const [tx, ty] = w2s(droneTruePos[0], droneTruePos[1]);
+  drawDrone(tx, ty, '#6b7c1a', 18, 0.4);
+}}
+
+
+// === CHARTS ================================================================================================─
+function drawCharts(){
+  const ew=errC.offsetWidth||220,eh=46;
+  errC.width=ew; errC.height=eh;
+  errX.clearRect(0,0,ew,eh);
+  errX.fillStyle='#fafaf8'; errX.fillRect(0,0,ew,eh);
+  if(errHist.length>1){
+    const mx=Math.max(...errHist,0.01);
+    errX.beginPath();
+    errHist.forEach((v,i)=>{const x=2+(i/(errHist.length-1))*(ew-4),y=(eh-4)-(v/mx)*(eh-8);i===0?errX.moveTo(x,y):errX.lineTo(x,y);});
+    errX.lineTo(ew-2,eh-2); errX.lineTo(2,eh-2); errX.closePath();
+    errX.fillStyle='rgba(193,127,36,0.12)'; errX.fill();
+    errX.strokeStyle='#c17f24'; errX.lineWidth=1.5;
+    errX.beginPath();
+    errHist.forEach((v,i)=>{const x=2+(i/(errHist.length-1))*(ew-4),y=(eh-4)-(v/mx)*(eh-8);i===0?errX.moveTo(x,y):errX.lineTo(x,y);});
+    errX.stroke();
+    errX.fillStyle='#a08060'; errX.font='8px "IBM Plex Mono"'; errX.fillText(mx.toFixed(2)+'m',4,11);
+  }
+  const nw2=neffC.offsetWidth||220,nh=46;
+  neffC.width=nw2; neffC.height=nh;
+  neffX.clearRect(0,0,nw2,nh);
+  neffX.fillStyle='#fafaf8'; neffX.fillRect(0,0,nw2,nh);
+  if(neffHist.length>1){
+    const mx=cfg.n_particles;
+    neffX.beginPath();
+    neffHist.forEach((v,i)=>{const x=2+(i/(neffHist.length-1))*(nw2-4),y=(nh-4)-(v/mx)*(nh-8);i===0?neffX.moveTo(x,y):neffX.lineTo(x,y);});
+    neffX.lineTo(nw2-2,nh-2); neffX.lineTo(2,nh-2); neffX.closePath();
+    neffX.fillStyle='rgba(107,124,26,0.1)'; neffX.fill();
+    neffX.strokeStyle='#6b7c1a'; neffX.lineWidth=1.5;
+    neffX.beginPath();
+    neffHist.forEach((v,i)=>{const x=2+(i/(neffHist.length-1))*(nw2-4),y=(nh-4)-(v/mx)*(nh-8);i===0?neffX.moveTo(x,y):neffX.lineTo(x,y);});
+    neffX.stroke();
+    const ty=(nh-4)-(0.5)*(nh-8);
+    neffX.strokeStyle='rgba(192,57,43,0.45)'; neffX.lineWidth=1; neffX.setLineDash([3,3]);
+    neffX.beginPath(); neffX.moveTo(2,ty); neffX.lineTo(nw2-2,ty); neffX.stroke(); neffX.setLineDash([]);
+    neffX.fillStyle='#a08060'; neffX.font='8px "IBM Plex Mono"'; neffX.fillText('resample@'+Math.round(mx/2),4,nh-4);
+  }
+}
+
+// === DRAG INTERACTION =================================================================================─
+const HIT=22; // px hit radius
+
+function findDragTarget(sx,sy) {
+  // check goal
+  const goal=customGoal||DEF.goal;
+  const[gx,gy]=w2s(goal[0],goal[1]);
+  if(Math.hypot(sx-gx,sy-gy)<HIT) return {type:'goal'};
+  // check start
+  const start=customStart||DEF.start;
+  const[stx,sty]=w2s(start[0],start[1]);
+  if(Math.hypot(sx-stx,sy-sty)<HIT) return {type:'start'};
+  // check palms
+  for(let i=0;i<palms.length;i++){
+    const[px,py]=w2s(palms[i][0],palms[i][1]);
+    if(Math.hypot(sx-px,sy-py)<HIT) return {type:'palm',idx:i};
+  }
+  return null;
+}
+
+canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect();
+  const sx=e.clientX-r.left, sy=e.clientY-r.top;
+  if(dragging&&dragTarget){
+    const[wx,wy]=s2w(sx,sy);
+    const cx=clamp(wx,0,6),cy=clamp(wy,0,6);
+    if(dragTarget.type==='goal'){
+      customGoal=[cx,cy];
+    } else if(dragTarget.type==='start'){
+      customStart=[cx,cy];
+      if(droneTruePos){droneTruePos=[cx,cy];droneEst=[cx,cy];}
+    } else if(dragTarget.type==='palm'){
+      palms[dragTarget.idx]=[cx,cy];
+      if(palmTypes[dragTarget.idx]==='tree') palmVels[dragTarget.idx]=[0,0];
+    }
+    canvas.className='grabbing';
+    if(!running) draw();
+    return;
+  }
+  // hover detection for cursor
+  const target=findDragTarget(sx,sy);
+  canvas.className=target?'can-grab':'';
+  // tooltip
+  const[wx,wy]=s2w(sx,sy);
+  const tooltip=document.getElementById('tooltip');
+  if(target){
+    tooltip.style.display='block';
+    tooltip.style.left=(sx+14)+'px'; tooltip.style.top=(sy-28)+'px';
+    if(target.type==='goal') tooltip.textContent='Drag to move GOAL';
+    else if(target.type==='start') tooltip.textContent='Drag to move START';
+    else tooltip.textContent=palmAngry[target.idx]?'ANGRY BIRD! Drag it.':palmTypes[target.idx]==='tree'?'Tree — drag me':'Bird — drag me';
+  } else {
+    tooltip.style.display='none';
+  }
+});
+
+canvas.addEventListener('mousedown',e=>{
+  if(e.button!==0) return;
+  const r=canvas.getBoundingClientRect();
+  const sx=e.clientX-r.left, sy=e.clientY-r.top;
+  const target=findDragTarget(sx,sy);
+  if(target){
+    dragTarget=target; dragging=true;
+    canvas.className='grabbing';
+    e.preventDefault();
+  }
+});
+
+canvas.addEventListener('mouseup',()=>{
+  if(dragging&&dragTarget?.type==='start'&&!running){
+    resetSim();
+  }
+  dragging=false; dragTarget=null;
+  canvas.className='';
+});
+canvas.addEventListener('mouseleave',()=>{
+  dragging=false; dragTarget=null; canvas.className='';
+  document.getElementById('tooltip').style.display='none';
+});
+
+// Touch drag
+canvas.addEventListener('touchstart',e=>{
+  const r=canvas.getBoundingClientRect();
+  const t=e.touches[0];
+  const sx=t.clientX-r.left, sy=t.clientY-r.top;
+  const target=findDragTarget(sx,sy);
+  if(target){ dragTarget=target; dragging=true; e.preventDefault(); }
+},{passive:false});
+canvas.addEventListener('touchmove',e=>{
+  if(!dragging||!dragTarget) return;
+  e.preventDefault();
+  const r=canvas.getBoundingClientRect();
+  const t=e.touches[0];
+  const sx=t.clientX-r.left, sy=t.clientY-r.top;
+  const[wx,wy]=s2w(sx,sy);
+  const cx=clamp(wx,0,6),cy=clamp(wy,0,6);
+  if(dragTarget.type==='goal') customGoal=[cx,cy];
+  else if(dragTarget.type==='start'){customStart=[cx,cy];if(droneTruePos){droneTruePos=[cx,cy];droneEst=[cx,cy];}}
+  else if(dragTarget.type==='palm') palms[dragTarget.idx]=[cx,cy];
+  if(!running) draw();
+},{passive:false});
+canvas.addEventListener('touchend',()=>{
+  dragging=false; dragTarget=null;
+});
+
+// === CONTROLS =============================================================================================─
+function setStatus(text,cls){
+  const el=document.getElementById('status-badge');
+  el.textContent=text; el.className='';
+  if(cls) el.classList.add(cls);
+}
+function togglePlay(){
+  running=!running;
+  const btn=document.getElementById('btn-play');
+  btn.textContent=running?'PAUSE':'RUN';
+  btn.classList.toggle('running',running);
+  if(running){lastFrame=0;animId=requestAnimationFrame(loop);setStatus('RUNNING','running');}
+  else{cancelAnimationFrame(animId);setStatus('PAUSED','');}
+}
+function toggleSec(id){document.getElementById(id).classList.toggle('collapsed');}
+function toggleSensor(id){sensors[id]=!sensors[id];document.getElementById('t-'+id).classList.toggle('on',sensors[id]);}
+function toggleViz(id){viz[id]=!viz[id];document.getElementById('t-'+id).classList.toggle('on',viz[id]);if(!running)draw();}
+
+// === SLIDER BINDING ====================================================================================─
+function bindSlider(id,key,fmt){
+  const el=document.getElementById('r-'+id), dv=document.getElementById('v-'+id);
+  if(!el||!dv) return;
+  el.addEventListener('input',()=>{
+    const v=parseFloat(el.value); cfg[key]=v;
+    dv.textContent=fmt?fmt(v):v.toFixed(2);
+    if(!running) draw();
+  });
+}
+bindSlider('npart','n_particles',v=>Math.round(v));
+bindSlider('sigmo','sigma_motion');
+bindSlider('siggps','sigma_gps');
+bindSlider('sigrng','sigma_range');
+bindSlider('katt','k_att');
+bindSlider('krep','k_rep');
+bindSlider('ktan','k_tan');
+bindSlider('rho0','rho0');
+bindSlider('vmax','v_max');
+
+// === MODAL ===================================================================================================
+function selectCard(id){
+  selectedCard=id;
+  document.querySelectorAll('.mode-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('card-'+id).classList.add('selected');
+}
+function closeModal(){
+  document.getElementById('modal-overlay').style.display='none';
+  setTimeout(()=>{resize();resetSim();},80);
+  if(selectedCard&&selectedCard!=='all') setTimeout(()=>startTutorial(),900);
+}
+
+// === TUTORIAL =============================================================================================
+const tutorSteps={
+  pf:[
+    {text:"Green = real drone. Blue = filter's guess. Hit RUN and watch the gap!",anchor:'btn-play',pos:'bottom'},
+    {text:"Yellow dots = particles. They vote on where the drone is. Democracy, but math.",anchor:'sec-pf',pos:'right'},
+    {text:"Crank Motion Noise. Particles explode. Filter sweats. Neff tanks.",anchor:'prow-sigmo',pos:'right'},
+    {text:"Kill GPS. Blue drone goes full conspiracy mode and starts wandering.",anchor:'sec-sens',pos:'right'},
+    {text:"Error chart = gap between drones. Neff below orange line = resample triggered.",anchor:'sec-charts',pos:'right'},
+  ],
+  apf:[
+    {text:"Goal pulls, trees push, birds dodge. Textbook APF. Hit RUN.",anchor:'btn-play',pos:'bottom'},
+    {text:"Open PATH PLANNER and make Attract huge. Drone straight-lines into a tree.",anchor:'sec-apf',pos:'right'},
+    {text:"Raise Repel. Drone becomes cowardly and stops moving. Too much therapy.",anchor:'sec-apf',pos:'right'},
+    {text:"Tangent is what stops the drone getting stuck in a corner. Don't zero it.",anchor:'sec-apf',pos:'right'},
+    {text:"Drag the GOAL into a corner surrounded by trees. Now escape.",anchor:'canvas-wrap',pos:'left'},
+  ],
+  obs:[
+    {text:"Right-click to spawn an ANGRY bird. It chases the drone. Aggressively.",anchor:'canvas-wrap',pos:'left'},
+    {text:"Angry birds home in on the TRUE drone position. Filter doesn't know they exist.",anchor:'sec-pf',pos:'right'},
+    {text:"Drag a tree right onto the path. Drone must reroute or panic.",anchor:'canvas-wrap',pos:'left'},
+    {text:"Influence rings show danger zones. Birds move in and out — force field flickers.",anchor:'sec-viz',pos:'right'},
+    {text:"Spawn 4 angry birds. Raise speed. Close your eyes. Click RUN.",anchor:'btn-play',pos:'bottom'},
+  ],
+};
+let tutorIdx=0, tutorMode='pf';
+function startTutorial(){
+  tutorMode=selectedCard||'pf';
+  if(!tutorSteps[tutorMode]) tutorMode='pf';
+  tutorIdx=0; showTutorStep();
+}
+function showTutorStep(){
+  const steps=tutorSteps[tutorMode];
+  if(tutorIdx>=steps.length){closeTutor();return;}
+  const s=steps[tutorIdx];
+  document.getElementById('tutor-step').textContent=`STEP ${tutorIdx+1} / ${steps.length}`;
+  document.getElementById('tutor-text').textContent=s.text;
+  const tutor=document.getElementById('tutor');
+  tutor.classList.add('show');
+  const anchor=document.getElementById(s.anchor);
+  if(anchor){
+    const r=anchor.getBoundingClientRect();
+    if(s.pos==='bottom'){tutor.style.top=(r.bottom+10)+'px';tutor.style.left=r.left+'px';}
+    else if(s.pos==='right'){tutor.style.top=(r.top+2)+'px';tutor.style.left=(r.right+10)+'px';}
+    else{tutor.style.top=(r.top+2)+'px';tutor.style.left=Math.max(8,r.left-260)+'px';}
+  } else {
+    tutor.style.top='70px'; tutor.style.left='280px';
+  }
+}
+function nextTutorStep(){tutorIdx++;showTutorStep();}
+function closeTutor(){document.getElementById('tutor').classList.remove('show');}
+
+// === RESIZE ================================================================================================─
+function resize(){
+  const wrap=canvas.parentElement;
+  canvas.width=Math.max(wrap.clientWidth,300);
+  canvas.height=Math.max(wrap.clientHeight,380);
+  if(!running) draw();
+}
+window.addEventListener('resize',resize);
+setTimeout(()=>{resize();resetSim();},80);
+</script>
+</body>
+</html>
