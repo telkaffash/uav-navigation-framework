@@ -14,12 +14,25 @@
   --shadow: rgba(80,70,50,0.12);
   --text: #2a2418;
   --muted: #7a7060;
-  --accent: #c17f24;       /* MATLAB orange */
-  --accent2: #6b7c1a;      /* olive green */
+  --accent: #c17f24;       
+  --accent2: #6b7c1a;      
   --danger: #c0392b;
   --purple: #6e4fa0;
   --blue: #1f5f8b;
   --particle: #d4a017;
+  /* --bg: #f5f5f0;
+  --panel: #ffffff;
+  --border: #d4cfc4;
+  --border2: #b8b0a0;
+  --shadow: rgba(80,70,50,0.12);
+  --text: #2a2418;
+  --muted: #7a7060;
+  --accent: #c17f24;       
+  --accent2: #6b7c1a;      
+  --danger: #c0392b;
+  --purple: #6e4fa0;
+  --blue: #1f5f8b;
+  --particle: #d4a017; */
   --pixel: 'Press Start 2P', monospace;
   --body: 'IBM Plex Sans', sans-serif;
   --mono: 'IBM Plex Mono', monospace;
@@ -168,42 +181,6 @@ canvas.chart { width: 100%; height: 46px; display: block; border-radius: 4px; ba
   box-shadow: 0 2px 6px var(--shadow);
 }
 
-/* === MODAL === */
-#modal-overlay {
-  position: fixed; inset: 0; background: rgba(30,20,10,0.55);
-  backdrop-filter: blur(3px); z-index: 100;
-  display: flex; align-items: center; justify-content: center;
-}
-#modal {
-  background: white; border-radius: 12px; padding: 28px 30px;
-  max-width: 500px; width: 90%;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.22);
-  border: 2px solid var(--border);
-}
-.modal-title { font-family: var(--pixel); font-size: 11px; color: var(--accent); margin-bottom: 6px; }
-.modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
-
-.mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 18px; }
-.mode-card {
-  padding: 14px 12px; border-radius: 8px; border: 2px solid var(--border);
-  cursor: pointer; transition: all 0.18s; background: var(--bg); text-align: left;
-}
-.mode-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 5px 14px var(--shadow); }
-.mode-card.selected { border-color: var(--accent); background: #fdf4e7; }
-.card-icon {
-  width: 32px; height: 32px; margin-bottom: 8px;
-  display: flex; align-items: center; justify-content: center;
-}
-.mode-name { font-family: var(--pixel); font-size: 6.5px; color: var(--text); display: block; margin-bottom: 4px; }
-.mode-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
-
-.modal-btn {
-  width: 100%; padding: 12px; border-radius: 7px; border: none;
-  background: var(--accent); color: white; font-family: var(--pixel); font-size: 8.5px;
-  cursor: pointer; transition: all 0.14s; letter-spacing: 0.06em;
-}
-.modal-btn:hover { background: #a86d1a; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(193,127,36,0.4); }
-
 /* === TUTORIAL === */
 #tutor {
   position: fixed; z-index: 90; pointer-events: none;
@@ -215,7 +192,7 @@ canvas.chart { width: 100%; height: 46px; display: block; border-radius: 4px; ba
   padding: 13px 15px; max-width: 240px;
   box-shadow: 0 6px 20px rgba(193,127,36,0.2);
 }
-.tutor-step { font-family: var(--pixel); font-size: 6px; color: var(--accent); margin-bottom: 5px; }
+.tutor-step { font-family: var(--pixel); font-size: 10px; color: var(--accent); margin-bottom: 5px; }
 .tutor-text { font-size: 12px; color: var(--text); line-height: 1.5; margin-bottom: 10px; }
 .tutor-btns { display: flex; gap: 7px; }
 .tbubble-btn {
@@ -243,7 +220,6 @@ canvas.chart { width: 100%; height: 46px; display: block; border-radius: 4px; ba
   <button class="tbtn" id="btn-reset" onclick="resetSim()">RESET</button>
   <button class="tbtn" id="btn-tutor" onclick="startTutorial()" title="Tutorial">?</button>
   <div class="sep"></div>
-  <span style="font-size:11px;color:var(--muted);font-style:italic">Drag obstacles &amp; goal on the map &nbsp;|&nbsp; Right-click canvas to add</span>
   <div id="status-badge">IDLE</div>
 </div>
 
@@ -293,13 +269,13 @@ canvas.chart { width: 100%; height: 46px; display: block; border-radius: 4px; ba
       <div class="sec-body">
         <div class="tog-row"><span class="tog-label">GPS</span><button class="tog on" id="t-gps" onclick="toggleSensor('gps')"></button></div>
         <div class="prow">
-          <div class="prow-header"><span class="plabel">GPS NOISE</span><span class="pval" id="v-siggps">0.15</span></div>
+          <div class="prow-header"><span class="plabel">NOISE</span><span class="pval" id="v-siggps">0.15</span></div>
           <input type="range" id="r-siggps" min="0.01" max="1.5" step="0.01" value="0.15">
           <div class="phint">Kill GPS + max noise = blind drone.</div>
         </div>
-        <div class="tog-row" style="margin-top:9px"><span class="tog-label">RANGE SENSOR</span><button class="tog on" id="t-range" onclick="toggleSensor('range')"></button></div>
+        <div class="tog-row" style="margin-top:9px"><span class="tog-label">LiDAR</span><button class="tog on" id="t-range" onclick="toggleSensor('range')"></button></div>
         <div class="prow">
-          <div class="prow-header"><span class="plabel">RANGE NOISE</span><span class="pval" id="v-sigrng">0.12</span></div>
+          <div class="prow-header"><span class="plabel">NOISE</span><span class="pval" id="v-sigrng">0.12</span></div>
           <input type="range" id="r-sigrng" min="0.01" max="0.8" step="0.01" value="0.12">
         </div>
       </div>
@@ -362,7 +338,7 @@ canvas.chart { width: 100%; height: 46px; display: block; border-radius: 4px; ba
       </div>
     </div>
 
-    <!-- Legend -->
+    <!-- Legend
     <div class="section" id="sec-legend">
       <div class="section-hdr" onclick="toggleSec('sec-legend')">
         <span class="sec-title">LEGEND</span><span class="sec-arrow">▾</span>
@@ -375,10 +351,10 @@ canvas.chart { width: 100%; height: 46px; display: block; border-radius: 4px; ba
         <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:2px;background:#c0392b"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">ANGRY BIRD (follows!)</span></div>
         <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:2px;background:#5a7a3a"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">TREE (static)</span></div>
       </div>
-    </div>
+    </div> -->
 
     <!-- Right-click menu helper -->
-    <div class="section" id="sec-add">
+    <!-- <div class="section" id="sec-add">
       <div class="section-hdr" onclick="toggleSec('sec-add')">
         <span class="sec-title">ADD OBSTACLES</span><span class="sec-arrow">▾</span>
       </div>
@@ -394,7 +370,7 @@ canvas.chart { width: 100%; height: 46px; display: block; border-radius: 4px; ba
         </button>
         <button onclick="clearCustom()" style="margin-top:8px;width:100%;padding:5px;border-radius:5px;border:1.5px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-size:11px;font-family:var(--body)">Clear all obstacles</button>
       </div>
-    </div>
+    </div> -->
 
   </div>
 </div>
@@ -420,46 +396,6 @@ canvas.chart { width: 100%; height: 46px; display: block; border-radius: 4px; ba
   </div>
 </div>
 
-<!-- MODAL -->
-<div id="modal-overlay">
-  <div id="modal">
-    <div class="modal-title">UAV NAV LAB</div>
-    <div class="modal-sub">A drone that doesn't know where it is tries to get somewhere without hitting stuff. What do you want to break today?</div>
-    <div style="font-family:var(--pixel);font-size:6px;color:var(--muted);margin-bottom:10px">PICK YOUR ADVENTURE</div>
-    <div class="mode-cards">
-      <div class="mode-card" id="card-pf" onclick="selectCard('pf')">
-        <div class="card-icon">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="3" fill="#1f5f8b"/><circle cx="7" cy="8" r="2" fill="#d4a017" opacity=".5"/><circle cx="20" cy="10" r="2" fill="#d4a017" opacity=".5"/><circle cx="10" cy="20" r="2" fill="#d4a017" opacity=".7"/><circle cx="19" cy="20" r="2" fill="#d4a017" opacity=".4"/><circle cx="5" cy="17" r="1.5" fill="#d4a017" opacity=".6"/></svg>
-        </div>
-        <span class="mode-name">PARTICLE FILTER</span>
-        <span class="mode-desc">Watch a cloud of guesses collapse into the truth</span>
-      </div>
-      <div class="mode-card" id="card-apf" onclick="selectCard('apf')">
-        <div class="card-icon">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="22" cy="6" r="4" fill="#6e4fa0" opacity=".3" stroke="#6e4fa0" stroke-width="1.5"/><circle cx="6" cy="22" r="3" fill="#6b7c1a"/><path d="M8 20C10 14 16 12 20 8" stroke="#c17f24" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 2"/></svg>
-        </div>
-        <span class="mode-name">PATH PLANNING</span>
-        <span class="mode-desc">Forces that attract, repel, and occasionally confuse</span>
-      </div>
-      <div class="mode-card" id="card-obs" onclick="selectCard('obs')">
-        <div class="card-icon">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><ellipse cx="14" cy="14" rx="5" ry="3" fill="#c0392b"/><path d="M9 14C6 11 2 13 2 13M19 14C22 11 26 13 26 13" stroke="#c0392b" stroke-width="1.8" stroke-linecap="round"/><path d="M10 10.5L12 12M18 10.5L16 12" stroke="#c0392b" stroke-width="1.2" stroke-linecap="round"/></svg>
-        </div>
-        <span class="mode-name">ANGRY BIRDS</span>
-        <span class="mode-desc">Some birds are jerks and will hunt you down</span>
-      </div>
-      <div class="mode-card" id="card-all" onclick="selectCard('all')">
-        <div class="card-icon">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="3" y="3" width="10" height="10" rx="2" fill="#c17f24" opacity=".3" stroke="#c17f24" stroke-width="1.5"/><rect x="15" y="15" width="10" height="10" rx="2" fill="#6b7c1a" opacity=".3" stroke="#6b7c1a" stroke-width="1.5"/><path d="M13 7h2M21 13v2" stroke="#6e4fa0" stroke-width="2" stroke-linecap="round"/></svg>
-        </div>
-        <span class="mode-name">FREE PLAY</span>
-        <span class="mode-desc">No hand-holding. Just vibes.</span>
-      </div>
-    </div>
-    <button class="modal-btn" onclick="closeModal()">LAUNCH</button>
-  </div>
-</div>
-
 <!-- TUTORIAL -->
 <div id="tutor">
   <div class="tutor-bubble">
@@ -480,14 +416,6 @@ const treeImg = new Image();
 treeImg.src = "assets/tree.png";
 const droneImg = new Image();
 droneImg.src = "assets/drone.png";
-const birdImg1 = new Image();
-birdImg1.src = "assets/bird1.png";
-const birdImg2 = new Image();
-birdImg2.src = "assets/bird2.png";
-const angryBirdImg1 = new Image();
-angryBirdImg1.src = "assets/bird1.png";
-const angryBirdImg2 = new Image();
-angryBirdImg2.src = "assets/bird2.png";
 const errC = document.getElementById('errChart');
 const errX = errC.getContext('2d');
 const neffC = document.getElementById('neffChart');
@@ -513,12 +441,11 @@ const DEF = {
 let cfg = Object.assign({}, DEF);
 
 let droneTruePos, droneEst, vPrev, particles, weights;
-let palms = [], palmVels = [], palmTypes = [], palmAngry = [];
-let birdPhase = [], birdFlapSpeed = [], birdFacing = [];let pathTrue=[], pathEst=[];
+let palms=[], palmVels=[], palmTypes=[], palmAngry=[];
+let pathTrue=[], pathEst=[];
 let customGoal=null, customStart=null;
 let birdAnim=0;
 let selectedCard=null;
-let spawnMode='tree';
 
 // === DRAG STATE ==========================================================================================─
 let dragTarget=null; // { type:'palm'|'goal'|'start', idx }
@@ -545,30 +472,27 @@ function ctxAction(type) {
   if(type==='goal') { customGoal=[cx,cy]; if(!running) draw(); return; }
   const vx=(Math.random()-0.5)*0.18, vy=(Math.random()-0.5)*0.18;
   const angry=(type==='angry');
-  palms.push([cx, cy]);
-  palmVels.push(type === 'tree' ? [0, 0] : [vx, vy]);
-  palmTypes.push(type === 'tree' ? 'tree' : 'bird');
+  palms.push([cx,cy]);
+  palmVels.push(type==='tree'?[0,0]:[vx,vy]);
+  palmTypes.push(type==='tree'?'tree':'bird');
   palmAngry.push(angry);
-  birdPhase.push(Math.random() * 1000);
-  birdFlapSpeed.push(type === 'tree' ? 8 : (angry ? 4 + Math.random() * 1.5 : 5 + Math.random() * 2));
-  birdFacing.push(vx >= 0 ? 1 : -1);
   if(!running) draw();
 }
 
-// === SPAWN MODE ==========================================================================================─
-function setSpawnMode(m) {
-  spawnMode=m;
-  document.getElementById('spawn-mode-tree').classList.toggle('active',m==='tree');
-  document.getElementById('spawn-mode-bird').classList.toggle('active',m==='bird');
-}
+// // === SPAWN MODE ==========================================================================================─
+// function setSpawnMode(m) {
+//   spawnMode=m;
+//   document.getElementById('spawn-mode-tree').classList.toggle('active',m==='tree');
+//   document.getElementById('spawn-mode-bird').classList.toggle('active',m==='bird');
+// }
 
 function clearCustom() {
-  palms = DEF.initPalms.map(p => [...p]);
-  palmVels = DEF.initVels.map(v => [...v]);
-  palmTypes = [...DEF.initTypes];
-  palmAngry = palms.map(() => false);
-  rebuildBirdMeta();
-  if (!running) draw();
+  const n=DEF.initPalms.length;
+  palms=DEF.initPalms.map(p=>[...p]);
+  palmVels=DEF.initVels.map(v=>[...v]);
+  palmTypes=[...DEF.initTypes];
+  palmAngry=palms.map(()=>false);
+  if(!running) draw();
 }
 
 // === UTILS ===================================================================================================
@@ -636,18 +560,6 @@ function pfStep(pp,ww,u,zG,zR,obs) {
   return {pp:fp,ww:fw,est:[ex,ey],neff};
 }
 
-function rebuildBirdMeta() {
-  birdPhase = palms.map(() => Math.random() * 1000);
-  birdFlapSpeed = palms.map((_, i) => {
-    if (palmTypes[i] !== 'bird') return 8;
-    return palmAngry[i] ? 4 + Math.random() * 1.5 : 5 + Math.random() * 2;
-  });
-  birdFacing = palms.map((_, i) => {
-    const vx = palmVels[i]?.[0] ?? 0;
-    return vx >= 0 ? 1 : -1; // 1 = facing right, -1 = facing left
-  });
-}
-
 // === RESET ===================================================================================================
 function resetSim() {
   stepCount=0; errHist=[]; neffHist=[];
@@ -656,11 +568,10 @@ function resetSim() {
   cfg.sigma_motion=parseFloat(document.getElementById('r-sigmo').value);
   droneTruePos=[...start]; droneEst=[...start]; vPrev=[1,0];
   pathTrue=[[...start]]; pathEst=[[...start]];
-  palms = DEF.initPalms.map(p => [...p]);
-  palmVels = DEF.initVels.map(v => [...v]);
-  palmTypes = [...DEF.initTypes];
-  palmAngry = palms.map(() => false);
-  rebuildBirdMeta();
+  palms=DEF.initPalms.map(p=>[...p]);
+  palmVels=DEF.initVels.map(v=>[...v]);
+  palmTypes=[...DEF.initTypes];
+  palmAngry=palms.map(()=>false);
   const n=cfg.n_particles;
   particles=[]; weights=new Float64Array(n).fill(1/n);
   for(let i=0;i<n;i++) particles.push([clamp(start[0]+cfg.sigma_motion*5*gauss(),0,6),clamp(start[1]+cfg.sigma_motion*5*gauss(),0,6)]);
@@ -789,8 +700,8 @@ function drawTree(x, y, grabbed) {
     ctx.shadowBlur = 14;
   }
 
-  const w = 66;
-  const h = 84;
+  const w = 90;
+  const h = 112;
 
   if (treeImg.complete && treeImg.naturalWidth > 0) {
     ctx.drawImage(treeImg, x - w / 2, y - h / 2, w, h);
@@ -807,68 +718,38 @@ function drawTree(x, y, grabbed) {
   ctx.restore();
 }
 
-function drawBird(x, y, t, angry, grabbed) {
+function drawBird(x,y,t,angry,grabbed) {
   ctx.save();
-
-  const w = angry ? 30 : 30;
-  const h = angry ? 40 : 40;
-
-  if (grabbed) {
-    ctx.shadowColor = '#c17f24';
-    ctx.shadowBlur = 14;
-  } else if (angry) {
-    ctx.shadowColor = '#c0392b44';
-    ctx.shadowBlur = 8;
+  const flap = Math.sin(t * (angry ? 3.2 : 2.2)) * (angry ? 0.55 : 0.35);  const col=angry?'#c0392b':'#c17f24';
+  const wingCol=angry?'#e74c3c':'#d4a017';
+  if(grabbed){ctx.shadowColor='#c17f24';ctx.shadowBlur=14;}
+  else if(angry){ctx.shadowColor='#c0392b44';ctx.shadowBlur=8;}
+  // wings
+  ctx.save(); ctx.translate(x-8,y); ctx.rotate(-flap);
+  ctx.fillStyle=wingCol; ctx.beginPath(); ctx.ellipse(0,-3,11,4,0.3,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  ctx.save(); ctx.translate(x+8,y); ctx.rotate(flap);
+  ctx.fillStyle=wingCol; ctx.beginPath(); ctx.ellipse(0,-3,11,4,-0.3,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  // body
+  ctx.fillStyle=col; ctx.beginPath(); ctx.ellipse(x,y,9,5.5,0,0,Math.PI*2); ctx.fill();
+  // beak
+  ctx.fillStyle='#f39c12'; ctx.beginPath();
+  ctx.moveTo(x+9,y); ctx.lineTo(x+16,y-2); ctx.lineTo(x+9,y+2); ctx.closePath(); ctx.fill();
+  // eye
+  ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(x+5,y-1,2.8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#1a1a1a'; ctx.beginPath(); ctx.arc(x+5.5,y-1,1.3,0,Math.PI*2); ctx.fill();
+  // angry eyebrow
+  if(angry){
+    ctx.strokeStyle='#7b0000'; ctx.lineWidth=1.8;
+    ctx.beginPath(); ctx.moveTo(x+3,y-4); ctx.lineTo(x+7,y-2.5); ctx.stroke();
   }
-
-  const frame = Math.floor(t / 10) % 2;
-
-  let img;
-  if (angry) {
-    img = frame === 0 ? angryBirdImg1 : angryBirdImg2;
-  } else {
-    img = frame === 0 ? birdImg1 : birdImg2;
-  }
-
-  if (img.complete && img.naturalWidth > 0) {
-    ctx.drawImage(img, x - w / 2, y - h / 2, w, h);
-  } else {
-    // fallback if image is not loaded yet
-    const flap = Math.sin(t * (angry ? 1.8 : 0.9)) * (angry ? 0.55 : 0.35);
-    const col = angry ? '#c0392b' : '#c17f24';
-    const wingCol = angry ? '#e74c3c' : '#d4a017';
-
-    ctx.save();
-    ctx.translate(x - 8, y);
-    ctx.rotate(-flap);
-    ctx.fillStyle = wingCol;
-    ctx.beginPath();
-    ctx.ellipse(0, -3, 11, 4, 0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    ctx.save();
-    ctx.translate(x + 8, y);
-    ctx.rotate(flap);
-    ctx.fillStyle = wingCol;
-    ctx.beginPath();
-    ctx.ellipse(0, -3, 11, 4, -0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    ctx.fillStyle = col;
-    ctx.beginPath();
-    ctx.ellipse(x, y, 9, 5.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
   ctx.restore();
 }
 
-
 function drawFlag(x,y,grabbed) {
   ctx.save();
-  const col='#6e4fa0';
+  const col='#EE4B2B';
   if(grabbed){ctx.shadowColor=col;ctx.shadowBlur=14;}
   ctx.strokeStyle=col+'bb'; ctx.lineWidth=2;
   ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y-24); ctx.stroke();
@@ -946,8 +827,8 @@ function draw() {
   for(let i=0;i<palms.length;i++){
     const[ox,oy]=w2s(palms[i][0],palms[i][1]);
     const grabbed=(dragging&&dragTarget&&dragTarget.type==='palm'&&dragTarget.idx===i);
-    if (palmTypes[i] === 'tree') drawTree(ox, oy, grabbed);
-    else drawBird(ox, oy, birdAnim, palmAngry[i], grabbed, i);
+    if(palmTypes[i]==='tree') drawTree(ox,oy,grabbed);
+    else drawBird(ox,oy,birdAnim,palmAngry[i],grabbed);
   }
 
   // Start
@@ -973,13 +854,13 @@ function draw() {
   // ESTIMATE DRONE
 if (droneEst) {
   const [ex, ey] = w2s(droneEst[0], droneEst[1]);
-  drawDrone(ex, ey, '#ff584b', 24, 0.3);
+  drawDrone(ex, ey, '#ff584b', 30, 0.3);
 }
 
 // TRUE DRONE
 if (droneTruePos) {
   const [tx, ty] = w2s(droneTruePos[0], droneTruePos[1]);
-  drawDrone(tx, ty, '#6b7c1a', 24, 1);
+  drawDrone(tx, ty, '#6b7c1a', 25, 1);
 }
 
 // PARTICLES
@@ -1000,9 +881,8 @@ if (viz.parts && particles) {
 // TRUE DRONE
 if (droneTruePos) {
   const [tx, ty] = w2s(droneTruePos[0], droneTruePos[1]);
-  drawDrone(tx, ty, '#6b7c1a', 18, 0.4);
+  drawDrone(tx, ty, '#6b7c1a', 25, 0.4);
 }}
-
 
 // === CHARTS ================================================================================================─
 function drawCharts(){
@@ -1200,28 +1080,25 @@ function closeModal(){
 
 // === TUTORIAL =============================================================================================
 const tutorSteps={
-  pf:[
-    {text:"Green = real drone. Blue = filter's guess. Hit RUN and watch the gap!",anchor:'btn-play',pos:'bottom'},
-    {text:"Yellow dots = particles. They vote on where the drone is. Democracy, but math.",anchor:'sec-pf',pos:'right'},
-    {text:"Crank Motion Noise. Particles explode. Filter sweats. Neff tanks.",anchor:'prow-sigmo',pos:'right'},
-    {text:"Kill GPS. Blue drone goes full conspiracy mode and starts wandering.",anchor:'sec-sens',pos:'right'},
-    {text:"Error chart = gap between drones. Neff below orange line = resample triggered.",anchor:'sec-charts',pos:'right'},
+  apf: [
+    {text:"How it works: The goal pulls the drone (attractive), obstacles pushes it away (repulsive), and a tangent helps the drone sneak around them without stopping. Hit RUN to see.", anchor:'btn-play', pos:'bottom'},
+    {text:"Push Attract too high and the drone starts making bold choices.", anchor:'sec-apf', pos:'right'},
+    {text:"Raise Repel and the drone gets extra cautious.", anchor:'sec-apf', pos:'right'},
   ],
-  apf:[
-    {text:"Goal pulls, trees push, birds dodge. Textbook APF. Hit RUN.",anchor:'btn-play',pos:'bottom'},
-    {text:"Open PATH PLANNER and make Attract huge. Drone straight-lines into a tree.",anchor:'sec-apf',pos:'right'},
-    {text:"Raise Repel. Drone becomes cowardly and stops moving. Too much therapy.",anchor:'sec-apf',pos:'right'},
-    {text:"Tangent is what stops the drone getting stuck in a corner. Don't zero it.",anchor:'sec-apf',pos:'right'},
-    {text:"Drag the GOAL into a corner surrounded by trees. Now escape.",anchor:'canvas-wrap',pos:'left'},
+    pf: [
+    {text:"Green = true drone position. Blue = the filter’s estimation. Hit RUN and watch the gap.", anchor:'btn-play', pos:'bottom'},
+    {text:"Yellow dots are particles: a whole cloud of possible locations.", anchor:'sec-pf', pos:'right'},
+    {text:"Increase Motion Noise and see the particles spread out fast.", anchor:'prow-sigmo', pos:'right'},
+    {text:"Turn off GPS and see what happens?", anchor:'sec-sens', pos:'right'},
   ],
-  obs:[
-    {text:"Right-click to spawn an ANGRY bird. It chases the drone. Aggressively.",anchor:'canvas-wrap',pos:'left'},
-    {text:"Angry birds home in on the TRUE drone position. Filter doesn't know they exist.",anchor:'sec-pf',pos:'right'},
-    {text:"Drag a tree right onto the path. Drone must reroute or panic.",anchor:'canvas-wrap',pos:'left'},
-    {text:"Influence rings show danger zones. Birds move in and out — force field flickers.",anchor:'sec-viz',pos:'right'},
-    {text:"Spawn 4 angry birds. Raise speed. Close your eyes. Click RUN.",anchor:'btn-play',pos:'bottom'},
+  
+  obs: [
+  {text:"Right click to drop obstacles onto the drone's way.", anchor:'canvas-wrap', pos:'left'},
+  {text:"Note that some birds don't like you and will try to catch you down.", anchor:'canvas-wrap', pos:'left'},
+
   ],
 };
+
 let tutorIdx=0, tutorMode='pf';
 function startTutorial(){
   tutorMode=selectedCard||'pf';
