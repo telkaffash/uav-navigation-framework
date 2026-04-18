@@ -338,40 +338,6 @@ canvas.chart { width: 100%; height: 46px; display: block; border-radius: 4px; ba
       </div>
     </div>
 
-    <!-- Legend
-    <div class="section" id="sec-legend">
-      <div class="section-hdr" onclick="toggleSec('sec-legend')">
-        <span class="sec-title">LEGEND</span><span class="sec-arrow">▾</span>
-      </div>
-      <div class="sec-body" style="display:flex;flex-direction:column;gap:6px">
-        <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:2px;background:#6b7c1a"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">TRUE DRONE</span></div>
-        <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:2px;background:#1f5f8b"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">PF ESTIMATE</span></div>
-        <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:#d4a017"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">PARTICLES</span></div>
-        <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:2px;background:#c17f24"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">NORMAL BIRD</span></div>
-        <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:2px;background:#c0392b"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">ANGRY BIRD (follows!)</span></div>
-        <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:2px;background:#5a7a3a"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">TREE (static)</span></div>
-      </div>
-    </div> -->
-
-    <!-- Right-click menu helper -->
-    <!-- <div class="section" id="sec-add">
-      <div class="section-hdr" onclick="toggleSec('sec-add')">
-        <span class="sec-title">ADD OBSTACLES</span><span class="sec-arrow">▾</span>
-      </div>
-      <div class="sec-body">
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5"><strong>Right-click</strong> anywhere on the map to spawn trees or birds. Then <strong>drag</strong> them around.</p>
-        <button class="tbtn active" id="spawn-mode-tree" onclick="setSpawnMode('tree')" style="width:100%;justify-content:center;margin-bottom:7px">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L12 8H2z" fill="currentColor" opacity=".8"/><rect x="6" y="8" width="2" height="5" fill="currentColor" opacity=".6"/></svg>
-          SPAWN: TREE
-        </button>
-        <button class="tbtn" id="spawn-mode-bird" onclick="setSpawnMode('bird')" style="width:100%;justify-content:center">
-          <svg width="16" height="10" viewBox="0 0 16 10" fill="none"><ellipse cx="8" cy="5" rx="4" ry="2.5" fill="currentColor"/><path d="M4 5C2 3 0 4 0 4M12 5C14 3 16 4 16 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-          SPAWN: BIRD
-        </button>
-        <button onclick="clearCustom()" style="margin-top:8px;width:100%;padding:5px;border-radius:5px;border:1.5px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-size:11px;font-family:var(--body)">Clear all obstacles</button>
-      </div>
-    </div> -->
-
   </div>
 </div>
 
@@ -446,6 +412,8 @@ let pathTrue=[], pathEst=[];
 let customGoal=null, customStart=null;
 let birdAnim=0;
 let selectedCard=null;
+let gameOver = false;
+let deathCause = '';
 
 // === DRAG STATE ==========================================================================================─
 let dragTarget=null; // { type:'palm'|'goal'|'start', idx }
@@ -563,6 +531,8 @@ function pfStep(pp,ww,u,zG,zR,obs) {
 // === RESET ===================================================================================================
 function resetSim() {
   stepCount=0; errHist=[]; neffHist=[];
+  gameOver = false;
+  deathCause = '';
   const start=customStart||DEF.start;
   cfg.n_particles=parseInt(document.getElementById('r-npart').value);
   cfg.sigma_motion=parseFloat(document.getElementById('r-sigmo').value);
@@ -622,6 +592,20 @@ function simStep() {
           if(spd>0.22){palmVels[i][0]/=spd*0.22/0.22;palmVels[i][1]/=spd*0.22/0.22;}
         }
       }
+        // bird collision check
+    for (let i = 0; i < palms.length; i++) {
+    if (palmTypes[i] === 'bird') {
+      const hitRadius = palmAngry[i] ? 0.26 : 0.18;
+      if (dist(droneTruePos, palms[i]) < hitRadius) {
+        triggerDeath(
+          palmAngry[i]
+            ? 'An angry bird caught you. Maybe don’t anger them next time.'
+            : 'Your drone was intercepted.. by a bird.'
+        );
+        return;
+      }
+    }
+  }
       palms[i][0]+=palmVels[i][0]; palms[i][1]+=palmVels[i][1];
       if(palms[i][0]<0||palms[i][0]>6){palmVels[i][0]*=-1;palms[i][0]+=palmVels[i][0];}
       if(palms[i][1]<0||palms[i][1]>6){palmVels[i][1]*=-1;palms[i][1]+=palmVels[i][1];}
@@ -882,7 +866,47 @@ if (viz.parts && particles) {
 if (droneTruePos) {
   const [tx, ty] = w2s(droneTruePos[0], droneTruePos[1]);
   drawDrone(tx, ty, '#6b7c1a', 25, 0.4);
-}}
+}
+
+  if (gameOver) {
+    ctx.save();
+
+    // dark overlay
+    ctx.fillStyle = 'rgba(25, 20, 18, 0.72)';
+    ctx.fillRect(0, 0, cw, ch);
+
+    // panel
+    const bw = Math.min(420, cw - 40);
+    const bh = 170;
+    const bx = (cw - bw) / 2;
+    const by = (ch - bh) / 2;
+
+    ctx.fillStyle = '#fffaf6';
+    ctx.strokeStyle = '#c0392b';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 14);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+
+    ctx.fillStyle = '#c0392b';
+    ctx.font = '14px "Press Start 2P"';
+    ctx.fillText('DRONE DOWN', cw / 2, by + 42);
+
+    ctx.fillStyle = '#2a2418';
+    ctx.font = '15px "IBM Plex Sans"';
+    ctx.fillText(deathCause || 'Mission failed.', cw / 2, by + 82);
+
+    ctx.fillStyle = '#7a7060';
+    ctx.font = '13px "IBM Plex Sans"';
+    ctx.fillText('Press RESET to try again.', cw / 2, by + 118);
+
+    ctx.restore();
+  }
+
+}
 
 // === CHARTS ================================================================================================─
 function drawCharts(){
@@ -1035,12 +1059,20 @@ function setStatus(text,cls){
   if(cls) el.classList.add(cls);
 }
 function togglePlay(){
+  if (gameOver) return;
+
   running=!running;
   const btn=document.getElementById('btn-play');
   btn.textContent=running?'PAUSE':'RUN';
   btn.classList.toggle('running',running);
-  if(running){lastFrame=0;animId=requestAnimationFrame(loop);setStatus('RUNNING','running');}
-  else{cancelAnimationFrame(animId);setStatus('PAUSED','');}
+  if(running){
+    lastFrame=0;
+    animId=requestAnimationFrame(loop);
+    setStatus('RUNNING','running');
+  } else {
+    cancelAnimationFrame(animId);
+    setStatus('PAUSED','');
+  }
 }
 function toggleSec(id){document.getElementById(id).classList.toggle('collapsed');}
 function toggleSensor(id){sensors[id]=!sensors[id];document.getElementById('t-'+id).classList.toggle('on',sensors[id]);}
@@ -1135,6 +1167,22 @@ function resize(){
 }
 window.addEventListener('resize',resize);
 setTimeout(()=>{resize();resetSim();},80);
+
+function triggerDeath(cause='A bird took your drone out of the sky.') {
+  running = false;
+  gameOver = true;
+  deathCause = cause;
+  cancelAnimationFrame(animId);
+
+  const btn = document.getElementById('btn-play');
+  btn.textContent = 'RUN';
+  btn.classList.remove('running');
+
+  setStatus('DRONE DOWN', 'timeout');
+  draw();
+}
+
+
 </script>
 </body>
 </html>
